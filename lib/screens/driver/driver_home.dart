@@ -4,7 +4,10 @@ import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../models/booking_model.dart';
+import '../../providers/driver_provider.dart';
 import 'scan_qr_screen.dart';
+import '../notifications_screen.dart';
+import '../dispute_screen.dart';
 
 class DriverHome extends StatefulWidget {
   const DriverHome({super.key});
@@ -15,7 +18,6 @@ class DriverHome extends StatefulWidget {
 
 class _DriverHomeState extends State<DriverHome> {
   int _selectedIndex = 0;
-  bool _isAvailable = false;
 
   @override
   void initState() {
@@ -29,11 +31,17 @@ class _DriverHomeState extends State<DriverHome> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    final driverProvider = Provider.of<DriverProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('AutoConnect Chauffeur', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          IconButton(
+            tooltip: 'Notifications',
+            icon: const Icon(Icons.notifications),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => authProvider.logout(),
@@ -41,7 +49,17 @@ class _DriverHomeState extends State<DriverHome> {
         ],
       ),
       body: [
-        _DashboardView(isAvailable: _isAvailable, onToggle: (val) => setState(() => _isAvailable = val)),
+        _DashboardView(
+          isAvailable: driverProvider.isAvailable, 
+          onToggle: (val) async {
+            final success = await driverProvider.setAvailability(val);
+            if (!success && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Erreur: Vous devez être vérifié pour vous mettre en ligne.')),
+              );
+            }
+          }
+        ),
         const _DriverBookingsView(),
         const _WalletView(),
       ][_selectedIndex],
@@ -207,6 +225,12 @@ class _DriverBookingsView extends StatelessWidget {
             onTap: isPending || isReadyToValidate
                 ? () => _handleBookingAction(context, bookingProvider, booking)
                 : null,
+            onLongPress: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => DisputeScreen(bookingId: booking.id)),
+              );
+            },
           ),
         );
       },

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 
@@ -55,13 +56,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // TON NOUVEAU LOGO ICI
-                  Image.asset(
-                    'assets/images/logo.png',
+                  SvgPicture.asset(
+                    'assets/images/logo.svg',
                     height: 150,
-                    errorBuilder: (context, error, stackTrace) {
-                      // Si l'image n'est pas encore enregistrée, on garde l'icône par défaut
-                      return const Icon(Icons.directions_car, size: 80, color: Color(0xFF1E3A8A));
-                    },
+                    width: 150,
+                    placeholderBuilder: (context) => const Icon(Icons.directions_car, size: 80, color: Color(0xFF1E3A8A)),
                   ),
                   const SizedBox(height: 24),
                   Text(

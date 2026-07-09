@@ -1,7 +1,11 @@
-import 'dart:io';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ApiConstants {
   static String get baseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:3000/api/v1';
+    }
     if (Platform.isAndroid) {
       return 'http://10.0.2.2:3000/api/v1';
     }
@@ -20,9 +24,10 @@ class ApiConstants {
   static String bookingStatus(String id) => '$bookings/$id/status';
   static String startBooking(String id) => '$bookings/$id/start';
 
-  // Vehicles (Driver + passenger search)
+  // Vehicles & Drivers
   static String get vehicles => '$baseUrl/vehicles';
   static String get vehiclesNearby => '$baseUrl/vehicles/nearby';
+  static String get driverAvailability => '$baseUrl/drivers/availability';
 
   // Stations
   static String get stations => '$baseUrl/stations';
@@ -36,6 +41,10 @@ class ApiConstants {
 
   // Notifications
   static String get notifications => '$baseUrl/notifications';
+
+  // Litiges (Disputes)
+  static String get disputes => '$baseUrl/disputes';
+  static String disputeDetail(String id) => '$disputes/$id';
 
   // Freight
   static String get freight => '$baseUrl/freight';

@@ -6,8 +6,10 @@ import 'providers/booking_provider.dart';
 import 'providers/station_provider.dart';
 import 'providers/wallet_provider.dart';
 import 'providers/vehicle_provider.dart';
+import 'providers/driver_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/freight_provider.dart';
+import 'providers/dispute_provider.dart';
 import 'services/voice_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
@@ -25,7 +27,9 @@ void main() {
         ChangeNotifierProvider(create: (_) => StationProvider()),
         ChangeNotifierProvider(create: (_) => WalletProvider()),
         ChangeNotifierProvider(create: (_) => VehicleProvider()),
+        ChangeNotifierProvider(create: (_) => DriverProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => DisputeProvider()),
         ChangeNotifierProvider(create: (_) => FreightProvider()),
         Provider(create: (_) => VoiceService()),
       ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/user_model.dart';
@@ -64,10 +65,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Center(
-                child: Image.asset(
-                  'assets/images/logo.png',
+                child: SvgPicture.asset(
+                  'assets/images/logo.svg',
                   height: 100,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.person_add, size: 80, color: Color(0xFF1E3A8A)),
+                  width: 100,
+                  placeholderBuilder: (context) => const Icon(Icons.person_add, size: 80, color: Color(0xFF1E3A8A)),
                 ),
               ),
               const SizedBox(height: 24),

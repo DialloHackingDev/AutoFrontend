@@ -40,7 +40,11 @@ class VehicleProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _apiService.get(ApiConstants.vehiclesNearby);
+      String url = ApiConstants.vehiclesNearby;
+      if (departure != null && destination != null) {
+        url += '?departure=$departure&destination=$destination';
+      }
+      final response = await _apiService.get(url);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         _availableVehicles = data.map((json) => Vehicle.fromJson(json)).toList();

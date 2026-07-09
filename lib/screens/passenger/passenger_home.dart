@@ -8,6 +8,10 @@ import '../../providers/booking_provider.dart';
 import '../../providers/freight_provider.dart';
 import '../../providers/vehicle_provider.dart';
 import '../../services/voice_service.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'payment_screen.dart';
+import '../notifications_screen.dart';
+import '../dispute_screen.dart';
 
 class PassengerHome extends StatefulWidget {
   const PassengerHome({super.key});
@@ -36,6 +40,11 @@ class _PassengerHomeState extends State<PassengerHome> {
       appBar: AppBar(
         title: const Text('AutoConnect Passager', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          IconButton(
+            tooltip: 'Notifications',
+            icon: const Icon(Icons.notifications),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+          ),
           IconButton(
             tooltip: 'Écouter les instructions',
             icon: const Icon(Icons.volume_up),
@@ -334,12 +343,52 @@ class _MyBookingsView extends StatelessWidget {
               Text('Prix : ${booking.prix.toStringAsFixed(0)} GNF'),
               const SizedBox(height: 12),
               const Text('Validation embarquement', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(
-                booking.qrCode != null || booking.otpCode != null
-                    ? 'QR/OTP prêt pour la validation.'
-                    : 'Le QR/OTP sera affiché dès que la réservation sera payée et validée.',
-              ),
+              if (booking.qrCode != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    child: QrImageView(
+                      data: booking.qrCode!,
+                      size: 200,
+                      backgroundColor: Colors.white,
+                    ),
+                  ),
+                )
+              else if (booking.otpCode != null)
+                Center(
+                  child: Text('Code OTP : ${booking.otpCode}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                )
+              else
+                const Text('Le QR/OTP sera affiché dès que la réservation sera payée et validée.'),
               const SizedBox(height: 20),
+              if (booking.statut == BookingStatus.CONFIRMED)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(sheetContext);
+                      final success = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PaymentScreen(
+                            bookingId: booking.id,
+                            amount: booking.prix,
+                          ),
+                        ),
+                      );
+                      if (success == true && context.mounted) {
+                        context.read<BookingProvider>().fetchBookings();
+                      }
+                    },
+                    icon: const Icon(Icons.payment),
+                    label: const Text('Payer la réservation'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 12),
               if (booking.statut != BookingStatus.CANCELLED &&
                   booking.statut != BookingStatus.COMPLETED &&
                   booking.statut != BookingStatus.IN_PROGRESS)
@@ -361,6 +410,18 @@ class _MyBookingsView extends StatelessWidget {
                     label: const Text('Annuler la réservation'),
                   ),
                 ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton.icon(
+                  onPressed: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => DisputeScreen(bookingId: booking.id)));
+                  },
+                  icon: const Icon(Icons.warning, color: Colors.orange),
+                  label: const Text('Signaler un problème', style: TextStyle(color: Colors.orange)),
+                ),
+              ),
             ],
           ),
         );

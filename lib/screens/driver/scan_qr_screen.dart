@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../providers/booking_provider.dart';
 
 class ScanQrScreen extends StatefulWidget {
@@ -47,17 +48,21 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
       return;
     }
 
+    Position? position = await _getCurrentPosition();
+    if (position == null) {
+      setState(() => _isScanning = true);
+      return;
+    }
+
     final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
     final success = await bookingProvider.startTrip(
       bookingId: widget.bookingId!,
-      driverLatitude: 9.6191,
-      driverLongitude: -13.6067,
-      passengerLatitude: 9.6192,
-      passengerLongitude: -13.6068,
+      driverLatitude: position.latitude,
+      driverLongitude: position.longitude,
+      passengerLatitude: position.latitude, // Mêmes coordonnées pour la validation
+      passengerLongitude: position.longitude,
       qrData: code,
     );
-
-    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -73,18 +78,59 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
     ).then((_) => Navigator.pop(context));
   }
 
+  Future<Position?> _getCurrentPosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Le service de localisation est désactivé.')));
+      }
+      return null;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permissions de localisation refusées.')));
+        }
+        return null;
+      }
+    }
+    
+    if (permission == LocationPermission.deniedForever) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permissions de localisation définitivement refusées.')));
+      }
+      return null;
+    } 
+
+    return await Geolocator.getCurrentPosition();
+  }
+
   Future<void> _submitTripStart({String? qrCode, String? otp}) async {
     if (widget.bookingId == null || _isSubmitting) return;
 
     setState(() => _isSubmitting = true);
 
+    Position? position = await _getCurrentPosition();
+    if (position == null) {
+      setState(() => _isSubmitting = false);
+      return;
+    }
+
+    if (!mounted) return;
+
     final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
     final success = await bookingProvider.startTrip(
       bookingId: widget.bookingId!,
-      driverLatitude: 9.6191,
-      driverLongitude: -13.6067,
-      passengerLatitude: 9.6192,
-      passengerLongitude: -13.6068,
+      driverLatitude: position.latitude,
+      driverLongitude: position.longitude,
+      passengerLatitude: position.latitude,
+      passengerLongitude: position.longitude,
       otp: otp,
       qrData: qrCode,
     );
