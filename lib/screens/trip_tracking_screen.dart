@@ -7,6 +7,7 @@ import '../core/map_config.dart';
 import '../models/booking_model.dart';
 import '../services/location_service.dart';
 import '../services/realtime_service.dart';
+import '../services/phone_call.dart';
 import '../services/route_service.dart';
 import '../widgets/map_markers.dart';
 import '../core/app_theme.dart';
@@ -267,7 +268,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
           Positioned(
             left: 12,
             right: 12,
-            bottom: 24,
+            // Au-dessus de la zone système (navigation par gestes ou boutons)
+            bottom: 16 + MediaQuery.paddingOf(context).bottom + (MediaQuery.systemGestureInsetsOf(context).bottom > 0 ? 8 : 0),
             child: Material(
               elevation: 8,
               borderRadius: BorderRadius.circular(20),
@@ -298,7 +300,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                               ),
                               Text(
                                 '${booking.departure} → ${booking.destination}',
-                                style: TextStyle(color: Colors.grey[700]),
+                                style: const TextStyle(color: AppColors.inkMuted),
                               ),
                             ],
                           ),
@@ -306,7 +308,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                         if (_distanceLabel != null)
                           Text(
                             _distanceLabel!,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
                           ),
                       ],
                     ),
@@ -319,21 +321,36 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                           color: _other == null ? AppColors.warning : AppColors.success,
                         ),
                         const SizedBox(width: 6),
-                        Expanded(child: Text(_freshnessLabel)),
-                        TextButton.icon(
+                        Expanded(child: Text(_freshnessLabel, style: const TextStyle(color: AppColors.inkMuted))),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _otherPhone == null ? null : () => callPhone(context, _otherPhone),
+                            icon: const Icon(Icons.call),
+                            label: Text(widget.asDriver ? 'Appeler le passager' : 'Appeler le chauffeur'),
+                            style: FilledButton.styleFrom(backgroundColor: AppColors.success),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        OutlinedButton(
                           onPressed: _fitBoth,
-                          icon: const Icon(Icons.center_focus_strong),
-                          label: const Text('Centrer'),
+                          style: OutlinedButton.styleFrom(minimumSize: const Size(52, 52), padding: EdgeInsets.zero),
+                          child: const Tooltip(
+                            message: 'Centrer la carte',
+                            child: Icon(Icons.center_focus_strong, color: AppColors.primary),
+                          ),
                         ),
                       ],
                     ),
-                    if (_otherPhone != null)
-                      Row(
-                        children: [
-                          const Icon(Icons.phone, size: 16),
-                          const SizedBox(width: 6),
-                          SelectableText(_otherPhone!),
-                        ],
+                    if (_otherPhone == null)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 6),
+                        child: Text('Numéro de téléphone indisponible.',
+                            style: TextStyle(fontSize: 12, color: AppColors.inkMuted)),
                       ),
                     if (_locationError != null)
                       Padding(
@@ -341,11 +358,11 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                         child: Text(_locationError!, style: const TextStyle(color: AppColors.danger)),
                       ),
                     if (!widget.asDriver)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
                         child: Text(
                           'Votre position est partagée avec le chauffeur jusqu’au départ.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          style: TextStyle(fontSize: 12, color: AppColors.inkMuted),
                         ),
                       ),
                   ],

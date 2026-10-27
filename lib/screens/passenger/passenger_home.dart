@@ -18,6 +18,7 @@ import '../../providers/freight_provider.dart';
 import '../../providers/vehicle_provider.dart';
 import '../../services/voice_service.dart';
 import '../../services/location_service.dart';
+import '../../services/phone_call.dart';
 import '../../services/passenger_location_sharer.dart';
 import '../../services/place_search_service.dart';
 import '../trip_tracking_screen.dart';
@@ -27,6 +28,7 @@ import 'passenger_profile_view.dart';
 import '../notifications_screen.dart';
 import '../dispute_screen.dart';
 import '../../core/app_theme.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class PassengerHome extends StatefulWidget {
   const PassengerHome({super.key});
@@ -89,10 +91,9 @@ class _PassengerHomeState extends State<PassengerHome> {
         const _MyBookingsView(),
         const PassengerProfileView(),
       ][_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: AppBottomNav(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
-        selectedItemColor: AppColors.primary,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Rechercher'),
           BottomNavigationBarItem(icon: Icon(Icons.directions_bus), label: 'Mes trajets'),
@@ -850,6 +851,26 @@ class _MyBookingsView extends StatelessWidget {
               if (booking.qrCode == null && booking.otpCode == null)
                 const Text('Le QR/OTP sera affiché dès que la réservation sera payée et validée.'),
               const SizedBox(height: 20),
+              // Contact direct avec le chauffeur dès qu'il a accepté, jusqu'à la fin du trajet
+              if (booking.driverPhone != null &&
+                  const {
+                    BookingStatus.CONFIRMED,
+                    BookingStatus.PAID,
+                    BookingStatus.BOARDING,
+                    BookingStatus.IN_PROGRESS,
+                  }.contains(booking.statut))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => callPhone(context, booking.driverPhone),
+                      icon: const Icon(Icons.call),
+                      label: Text('Appeler le chauffeur${booking.driverName != null ? ' (${booking.driverName})' : ''}'),
+                      style: FilledButton.styleFrom(backgroundColor: AppColors.success),
+                    ),
+                  ),
+                ),
               if (booking.isTrackable)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),

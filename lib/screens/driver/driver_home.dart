@@ -5,6 +5,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
 import '../../core/map_config.dart';
 import '../../services/location_service.dart';
+import '../../services/phone_call.dart';
 import '../trip_tracking_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/booking_provider.dart';
@@ -16,6 +17,7 @@ import 'scan_qr_screen.dart';
 import '../notifications_screen.dart';
 import '../dispute_screen.dart';
 import '../../core/app_theme.dart';
+import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/payment_method_tile.dart';
 import '../../core/formatters.dart';
 
@@ -87,10 +89,9 @@ class _DriverHomeState extends State<DriverHome> with WidgetsBindingObserver {
         const _DriverBookingsView(),
         const _WalletView(),
       ][_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: AppBottomNav(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
-        selectedItemColor: AppColors.primary,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Tableau de bord'),
           BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Réservations'),
@@ -253,13 +254,25 @@ class _DashboardViewState extends State<_DashboardView> {
                         ),
                         title: Text(booking.passengerName ?? 'Passager'),
                         subtitle: Text('${booking.departure} → ${booking.destination}'),
-                        trailing: FilledButton.icon(
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => TripTrackingScreen(booking: booking, asDriver: true)),
-                          ),
-                          icon: const Icon(Icons.navigation, size: 18),
-                          label: const Text('Localiser'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (booking.passengerPhone != null)
+                              IconButton.filled(
+                                tooltip: 'Appeler le passager',
+                                onPressed: () => callPhone(context, booking.passengerPhone),
+                                icon: const Icon(Icons.call),
+                                style: IconButton.styleFrom(backgroundColor: AppColors.success),
+                              ),
+                            IconButton.filled(
+                              tooltip: 'Localiser le passager',
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => TripTrackingScreen(booking: booking, asDriver: true)),
+                              ),
+                              icon: const Icon(Icons.navigation),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -589,17 +602,38 @@ class _DriverBookingsView extends StatelessWidget {
                   const Text('En attente du paiement du passager', style: TextStyle(color: AppColors.warning)),
                 if (booking.statut == BookingStatus.PAID)
                   const Text('Payée — en attente de la confirmation du passager', style: TextStyle(color: AppColors.warning)),
-                if (booking.isTrackable)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => TripTrackingScreen(booking: booking, asDriver: true)),
-                      ),
-                      icon: const Icon(Icons.navigation, size: 18),
-                      label: const Text('Localiser le passager'),
+                if (booking.isTrackable || _canCall(booking))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        if (_canCall(booking))
+                          FilledButton.icon(
+                            onPressed: () => callPhone(context, booking.passengerPhone),
+                            icon: const Icon(Icons.call, size: 18),
+                            label: const Text('Appeler'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              minimumSize: const Size(0, 40),
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                            ),
+                          ),
+                        if (booking.isTrackable)
+                          OutlinedButton.icon(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => TripTrackingScreen(booking: booking, asDriver: true)),
+                            ),
+                            icon: const Icon(Icons.navigation, size: 18, color: AppColors.primary),
+                            label: const Text('Localiser'),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 40),
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
               ],
@@ -692,6 +726,16 @@ class _DriverBookingsView extends StatelessWidget {
       }
     }
   }
+
+  /// Le chauffeur peut appeler le passager dès qu'il a accepté la réservation, jusqu'à la fin du trajet.
+  bool _canCall(Booking booking) =>
+      booking.passengerPhone != null &&
+      const {
+        BookingStatus.CONFIRMED,
+        BookingStatus.PAID,
+        BookingStatus.BOARDING,
+        BookingStatus.IN_PROGRESS,
+      }.contains(booking.statut);
 
   /// Action disponible pour le chauffeur selon le statut, ou null si aucune.
   String? _actionLabel(BookingStatus status) {
