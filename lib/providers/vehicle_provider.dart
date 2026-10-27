@@ -22,7 +22,7 @@ class VehicleProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.get(ApiConstants.vehicles);
+      final response = await _apiService.get(ApiConstants.myVehicles);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         _myVehicles = data.map((json) => Vehicle.fromJson(json)).toList();
@@ -61,6 +61,7 @@ class VehicleProvider with ChangeNotifier {
   }
 
   Future<bool> addVehicle(String marque, String modele, String immat, int capacite) async {
+    _errorMessage = null;
     try {
       final response = await _apiService.post(ApiConstants.vehicles, {
         'marque': marque,
@@ -72,9 +73,13 @@ class VehicleProvider with ChangeNotifier {
         await fetchMyVehicles();
         return true;
       }
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
     } catch (e) {
+      _errorMessage = 'Impossible d’ajouter le véhicule.';
       debugPrint('Add vehicle error: $e');
     }
+    notifyListeners();
     return false;
   }
 }

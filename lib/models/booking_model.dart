@@ -26,6 +26,11 @@ class Booking {
   final String? paymentMethod;
   final bool escrowHeld;
   final bool escrowReleased;
+  final String? driverId;
+  final String? driverName;
+  final String? driverPhone;
+  final String? passengerName;
+  final String? passengerPhone;
 
   Booking({
     required this.id,
@@ -42,7 +47,17 @@ class Booking {
     this.paymentMethod,
     this.escrowHeld = false,
     this.escrowReleased = false,
+    this.driverId,
+    this.driverName,
+    this.driverPhone,
+    this.passengerName,
+    this.passengerPhone,
   });
+
+  /// Réservation en cours de prise en charge : le passager partage sa position
+  /// et chacun peut suivre l'autre sur la carte.
+  bool get isTrackable =>
+      statut == BookingStatus.PAID || statut == BookingStatus.BOARDING || statut == BookingStatus.IN_PROGRESS;
 
   factory Booking.fromJson(Map<String, dynamic> json) {
     final paymentJson = json['payment'] is Map<String, dynamic>
@@ -51,6 +66,8 @@ class Booking {
     final escrowJson = paymentJson?['escrow'] is Map<String, dynamic>
         ? paymentJson!['escrow'] as Map<String, dynamic>
         : null;
+    final driverUser = (json['driver'] as Map<String, dynamic>?)?['user'] as Map<String, dynamic>?;
+    final passengerUser = (json['passenger'] as Map<String, dynamic>?)?['user'] as Map<String, dynamic>?;
 
     return Booking(
       id: json['id'].toString(),
@@ -70,6 +87,11 @@ class Booking {
       paymentMethod: paymentJson?['methode']?.toString(),
       escrowHeld: escrowJson?['isHeld'] ?? false,
       escrowReleased: escrowJson?['isReleased'] ?? false,
+      driverId: json['driverId']?.toString(),
+      driverName: driverUser?['nom']?.toString(),
+      driverPhone: driverUser?['telephone']?.toString(),
+      passengerName: passengerUser?['nom']?.toString(),
+      passengerPhone: passengerUser?['telephone']?.toString(),
     );
   }
 }

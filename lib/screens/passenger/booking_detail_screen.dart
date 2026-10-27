@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import '../../models/booking_model.dart';
 import '../../providers/booking_provider.dart';
+import '../../widgets/booking_qr_image.dart';
 
 class BookingDetailScreen extends StatefulWidget {
   final Booking booking;
@@ -53,11 +53,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                     const SizedBox(height: 24),
                     if (booking.statut == BookingStatus.PAID || booking.statut == BookingStatus.BOARDING) ...[
                       if (booking.qrCode != null)
-                        QrImageView(
-                          data: booking.qrCode!,
-                          version: QrVersions.auto,
-                          size: 200.0,
-                        ),
+                        BookingQrImage(qrCode: booking.qrCode!),
                       const SizedBox(height: 16),
                       Text(
                         'CODE OTP : ${booking.otpCode ?? "---"}',
@@ -166,7 +162,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
                 if (response != null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(response['message']?.toString() ?? 'Paiement initialisé.'))),
+                    SnackBar(content: Text(response['message']?.toString() ?? 'Paiement initialisé.')),
+                  );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(bookingProvider.errorMessage ?? 'Le paiement n’a pas pu être lancé.')),

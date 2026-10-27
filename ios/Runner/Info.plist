@@ -66,5 +66,15 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>AutoConnect utilise la caméra pour scanner le QR Code des passagers à l'embarquement.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>AutoConnect utilise votre position pour valider l'embarquement et suivre le trajet.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Autorise le backend local en HTTP pendant le développement -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

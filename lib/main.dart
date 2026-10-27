@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'providers/auth_provider.dart';
 import 'providers/booking_provider.dart';
 import 'providers/station_provider.dart';
@@ -53,7 +52,8 @@ class AutoConnectApp extends StatelessWidget {
           secondary: const Color(0xFF10B981),
         ),
         useMaterial3: true,
-        textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
+        // Poppins est embarquée dans l'app (assets/fonts) : pas de requête réseau au démarrage
+        fontFamily: 'Poppins',
       ),
       home: const AuthWrapper(),
       routes: {

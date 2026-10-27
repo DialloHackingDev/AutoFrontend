@@ -3,6 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../providers/booking_provider.dart';
+import '../../services/location_service.dart';
 
 class ScanQrScreen extends StatefulWidget {
   final String? bookingId;
@@ -44,11 +45,14 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
           content: Text('Code scanné : $code'),
           actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
         ),
-      ).then((_) => Navigator.pop(context));
+      ).then((_) {
+      if (mounted) Navigator.pop(context);
+    });
       return;
     }
 
     Position? position = await _getCurrentPosition();
+    if (!mounted) return;
     if (position == null) {
       setState(() => _isScanning = true);
       return;
@@ -59,11 +63,10 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
       bookingId: widget.bookingId!,
       driverLatitude: position.latitude,
       driverLongitude: position.longitude,
-      passengerLatitude: position.latitude, // Mêmes coordonnées pour la validation
-      passengerLongitude: position.longitude,
       qrData: code,
     );
 
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -75,40 +78,20 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
         ),
         actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
       ),
-    ).then((_) => Navigator.pop(context));
+    ).then((_) {
+      if (mounted) Navigator.pop(context);
+    });
   }
 
   Future<Position?> _getCurrentPosition() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
+    try {
+      return await LocationService().getCurrentPosition();
+    } on LocationException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Le service de localisation est désactivé.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
       }
       return null;
     }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permissions de localisation refusées.')));
-        }
-        return null;
-      }
-    }
-    
-    if (permission == LocationPermission.deniedForever) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permissions de localisation définitivement refusées.')));
-      }
-      return null;
-    } 
-
-    return await Geolocator.getCurrentPosition();
   }
 
   Future<void> _submitTripStart({String? qrCode, String? otp}) async {
@@ -129,8 +112,6 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
       bookingId: widget.bookingId!,
       driverLatitude: position.latitude,
       driverLongitude: position.longitude,
-      passengerLatitude: position.latitude,
-      passengerLongitude: position.longitude,
       otp: otp,
       qrData: qrCode,
     );
@@ -150,7 +131,9 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
         ),
         actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
       ),
-    ).then((_) => Navigator.pop(context));
+    ).then((_) {
+      if (mounted) Navigator.pop(context);
+    });
   }
 
   @override

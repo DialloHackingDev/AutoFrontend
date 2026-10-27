@@ -29,6 +29,8 @@ class BookingProvider with ChangeNotifier {
       } else {
         _errorMessage = _parseError(response.body);
       }
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
     } catch (e) {
       _errorMessage = 'Impossible de charger les réservations.';
       debugPrint('Fetch bookings error: $e');
@@ -62,6 +64,8 @@ class BookingProvider with ChangeNotifier {
       }
 
       _errorMessage = _parseError(response.body);
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
     } catch (e) {
       _errorMessage = 'Impossible de créer la réservation.';
       debugPrint('Create booking error: $e');
@@ -89,6 +93,8 @@ class BookingProvider with ChangeNotifier {
       }
 
       _errorMessage = _parseError(response.body);
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
     } catch (e) {
       _errorMessage = 'Impossible de mettre à jour la réservation.';
       debugPrint('Update booking status error: $e');
@@ -103,12 +109,45 @@ class BookingProvider with ChangeNotifier {
     return updateBookingStatus(bookingId, BookingStatus.CONFIRMED.name);
   }
 
+  /// Le passager confirme sa présence au départ avec sa propre position GPS.
+  /// Le chauffeur pourra ensuite démarrer le trajet en scannant son QR Code.
+  Future<bool> confirmBoarding({
+    required String bookingId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _apiService.post(ApiConstants.boardBooking(bookingId), {
+        'latitude': latitude,
+        'longitude': longitude,
+      });
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await fetchBookings();
+        return true;
+      }
+
+      _errorMessage = _parseError(response.body);
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } catch (e) {
+      _errorMessage = 'Impossible de confirmer l’embarquement.';
+      debugPrint('Confirm boarding error: $e');
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return false;
+  }
+
   Future<bool> startTrip({
     required String bookingId,
     required double driverLatitude,
     required double driverLongitude,
-    required double passengerLatitude,
-    required double passengerLongitude,
     String? otp,
     String? qrData,
   }) async {
@@ -117,22 +156,11 @@ class BookingProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final paidResponse = await _apiService.patch(ApiConstants.bookingStatus(bookingId), {
-        'statut': BookingStatus.PAID.name,
-      });
-
-      if (!(paidResponse.statusCode == 200 || paidResponse.statusCode == 201)) {
-        _errorMessage = _parseError(paidResponse.body);
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-
+      // La réservation doit déjà être PAID (confirmée par le callback opérateur) :
+      // le backend refuse le démarrage sinon.
       final response = await _apiService.post(ApiConstants.startBooking(bookingId), {
         'driverLatitude': driverLatitude,
         'driverLongitude': driverLongitude,
-        'passengerLatitude': passengerLatitude,
-        'passengerLongitude': passengerLongitude,
         if (otp != null && otp.isNotEmpty) 'otp': otp,
         if (qrData != null && qrData.isNotEmpty) 'qrData': qrData,
       });
@@ -143,6 +171,8 @@ class BookingProvider with ChangeNotifier {
       }
 
       _errorMessage = _parseError(response.body);
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
     } catch (e) {
       _errorMessage = 'Impossible de démarrer le trajet.';
       debugPrint('Start trip error: $e');
@@ -178,6 +208,8 @@ class BookingProvider with ChangeNotifier {
       }
 
       _errorMessage = _parseError(response.body);
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
     } catch (e) {
       _errorMessage = 'Impossible d’initier le paiement.';
       debugPrint('Initiate payment error: $e');
@@ -186,6 +218,11 @@ class BookingProvider with ChangeNotifier {
     _isLoading = false;
     notifyListeners();
     return null;
+  }
+
+  /// Termine le trajet : le backend libère alors les fonds du séquestre vers le wallet chauffeur.
+  Future<bool> completeTrip(String bookingId) async {
+    return updateBookingStatus(bookingId, BookingStatus.COMPLETED.name);
   }
 
   Future<bool> cancelBooking(String bookingId, {String? reason}) async {

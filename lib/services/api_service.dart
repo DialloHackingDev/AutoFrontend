@@ -103,8 +103,8 @@ class ApiService {
       ).timeout(_timeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        if (data['accessToken'] != null) {
+        final data = unwrapEnvelope(jsonDecode(response.body));
+        if (data is Map<String, dynamic> && data['accessToken'] != null) {
           await prefs.setString('jwt_token', data['accessToken']);
           if (data['refreshToken'] != null) {
             await prefs.setString('refresh_token', data['refreshToken']);
@@ -123,14 +123,56 @@ class ApiService {
     return false;
   }
 
+  /// Le backend enveloppe chaque réponse réussie dans
+  /// `{ success, message, data, timestamp }` (voir apiDocumentation.md).
+  /// Retourne `data` si l'enveloppe est présente, sinon la valeur telle quelle.
+  static dynamic unwrapEnvelope(dynamic decoded) {
+    if (decoded is Map<String, dynamic> &&
+        decoded['success'] == true &&
+        decoded.containsKey('data')) {
+      return decoded['data'];
+    }
+    return decoded;
+  }
+
   http.Response _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return response;
+      return _unwrapResponse(response);
     }
 
     final decoded = _decodeBody(response.body);
     final message = decoded?['message'] ?? decoded?['error'] ?? 'La requête a échoué.';
     throw ApiException(response.statusCode, message.toString());
+  }
+
+  /// Remplace le corps de la réponse par le contenu de `data`, pour que les
+  /// providers puissent décoder directement l'objet ou la liste attendue.
+  http.Response _unwrapResponse(http.Response response) {
+    if (response.body.trim().isEmpty) {
+      return response;
+    }
+
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(response.body);
+    } catch (_) {
+      return response;
+    }
+
+    final unwrapped = unwrapEnvelope(decoded);
+    if (identical(unwrapped, decoded)) {
+      return response;
+    }
+
+    return http.Response.bytes(
+      utf8.encode(jsonEncode(unwrapped)),
+      response.statusCode,
+      headers: {
+        ...response.headers,
+        'content-type': 'application/json; charset=utf-8',
+      },
+      request: response.request,
+    );
   }
 
   Map<String, dynamic>? _decodeBody(String body) {

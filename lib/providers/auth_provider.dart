@@ -45,7 +45,7 @@ class AuthProvider with ChangeNotifier {
 
     try {
       final response = await _apiService.post(ApiConstants.authLogin, {
-        'telephone': telephone,
+        'telephone': normalizePhone(telephone),
         'motDePasse': password,
       });
 
@@ -86,7 +86,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _apiService.post(ApiConstants.authRegister, {
         'nom': nom,
-        'telephone': telephone,
+        'telephone': normalizePhone(telephone),
         'motDePasse': password,
         'role': role,
         if (numeroPermis != null) 'numeroPermis': numeroPermis,
@@ -186,6 +186,16 @@ class AuthProvider with ChangeNotifier {
     _user = null;
     _errorMessage = null;
     notifyListeners();
+  }
+
+  /// Le backend attend un numéro international (+224…).
+  /// Accepte aussi les saisies locales : "620 00 00 00", "00224…", "224…".
+  static String normalizePhone(String input) {
+    var phone = input.replaceAll(RegExp(r'[\s.-]'), '');
+    if (phone.startsWith('+')) return phone;
+    if (phone.startsWith('00')) return '+${phone.substring(2)}';
+    if (phone.startsWith('224') && phone.length > 9) return '+$phone';
+    return '+224$phone';
   }
 
   void _setLoading(bool value) {

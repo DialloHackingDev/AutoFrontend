@@ -1,4 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Appels API backend -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Scan du QR Code passager (mobile_scanner) -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Validation GPS et suivi du trajet (geolocator) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="frontend"
         android:name="${applicationName}"

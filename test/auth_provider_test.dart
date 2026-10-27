@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/providers/auth_provider.dart';
 import 'package:frontend/services/api_service.dart';
 
@@ -7,7 +8,7 @@ class _FakeApiService extends ApiService {
   @override
   Future<http.Response> post(String url, Map<String, dynamic> body) async {
     if (url.contains('/auth/logout')) {
-      return http.Response('{}', 200);
+      throw const ApiException(500, 'Backend indisponible');
     }
     return http.Response('{"accessToken":"token","refreshToken":"refresh","user":{"id":"1","nom":"Test","telephone":"+224620000000","role":"PASSAGER"}}', 201);
   }
@@ -20,6 +21,10 @@ class _FakeApiService extends ApiService {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
 
   test('logout clears the local session even when the backend call fails', () async {
     final provider = AuthProvider(apiService: _FakeApiService());
