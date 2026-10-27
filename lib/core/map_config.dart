@@ -16,8 +16,8 @@ class MapConfig {
   /// Zoom « quartier » : assez large pour se repérer, assez proche pour voir les rues.
   static const double streetZoom = 14;
 
-  /// Couleurs (format attendu par MapLibre).
-  static const String primaryColor = '#1E3A8A';
-  static const String routeColor = '#1E3A8A';
+  /// Couleurs de la charte AutoConnect (format attendu par MapLibre).
+  static const String primaryColor = '#E41824';
+  static const String routeColor = '#E41824';
   static const String routeCasingColor = '#FFFFFF';
 }

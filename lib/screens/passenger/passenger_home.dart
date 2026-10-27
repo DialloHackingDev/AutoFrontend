@@ -23,8 +23,10 @@ import '../../services/place_search_service.dart';
 import '../trip_tracking_screen.dart';
 import '../../widgets/booking_qr_image.dart';
 import 'payment_screen.dart';
+import 'passenger_profile_view.dart';
 import '../notifications_screen.dart';
 import '../dispute_screen.dart';
+import '../../core/app_theme.dart';
 
 class PassengerHome extends StatefulWidget {
   const PassengerHome({super.key});
@@ -69,11 +71,7 @@ class _PassengerHomeState extends State<PassengerHome> {
       appBar: AppBar(
         title: const Text('AutoConnect', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(
-            tooltip: 'Notifications',
-            icon: const Icon(Icons.notifications),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
-          ),
+          const NotificationBell(),
           IconButton(
             tooltip: 'Écouter les instructions',
             icon: const Icon(Icons.volume_up),
@@ -89,12 +87,12 @@ class _PassengerHomeState extends State<PassengerHome> {
       body: [
         const _SearchTripView(),
         const _MyBookingsView(),
-        const _ProfileView(),
+        const PassengerProfileView(),
       ][_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
-        selectedItemColor: const Color(0xFF1E3A8A),
+        selectedItemColor: AppColors.primary,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Rechercher'),
           BottomNavigationBarItem(icon: Icon(Icons.directions_bus), label: 'Mes trajets'),
@@ -548,7 +546,7 @@ class _SearchTripViewState extends State<_SearchTripView> {
                   onSubmitted: (_) => _searchVehicles(),
                   decoration: InputDecoration(
                     hintText: 'Où allez-vous ?',
-                    prefixIcon: const Icon(Icons.search, color: Color(0xFF1E3A8A)),
+                    prefixIcon: const Icon(Icons.search, color: AppColors.primary),
                     suffixIcon: _destinationController.text.isEmpty
                         ? null
                         : IconButton(
@@ -581,7 +579,7 @@ class _SearchTripViewState extends State<_SearchTripView> {
                       avatar: Icon(
                         _manualDeparture == null ? Icons.my_location : Icons.place,
                         size: 18,
-                        color: const Color(0xFF1E3A8A),
+                        color: AppColors.primary,
                       ),
                       label: Text(_manualDeparture == null && _locating ? 'Localisation…' : 'Départ : $_departureValue'),
                       backgroundColor: Colors.white,
@@ -589,7 +587,7 @@ class _SearchTripViewState extends State<_SearchTripView> {
                       onPressed: _editDeparture,
                     ),
                     ActionChip(
-                      avatar: const Icon(Icons.inventory_2, size: 18, color: Color(0xFF1E3A8A)),
+                      avatar: const Icon(Icons.inventory_2, size: 18, color: AppColors.primary),
                       label: const Text('Envoyer un colis'),
                       backgroundColor: Colors.white,
                       elevation: 2,
@@ -599,7 +597,7 @@ class _SearchTripViewState extends State<_SearchTripView> {
                       ActionChip(
                         avatar: const Icon(Icons.navigation, size: 18, color: Colors.white),
                         label: const Text('Suivre mon chauffeur', style: TextStyle(color: Colors.white)),
-                        backgroundColor: Colors.green[700],
+                        backgroundColor: AppColors.successDark,
                         elevation: 2,
                         onPressed: () => Navigator.push(
                           context,
@@ -632,7 +630,7 @@ class _SearchTripViewState extends State<_SearchTripView> {
             },
             child: _locating
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.my_location, color: Color(0xFF1E3A8A)),
+                : const Icon(Icons.my_location, color: AppColors.primary),
           ),
         ),
 
@@ -679,8 +677,8 @@ class _PlaceSuggestions extends StatelessWidget {
                 dense: true,
                 leading: const CircleAvatar(
                   radius: 16,
-                  backgroundColor: Color(0xFFE8EDF8),
-                  child: Icon(Icons.place, size: 18, color: Color(0xFF1E3A8A)),
+                  backgroundColor: AppColors.primarySoft,
+                  child: Icon(Icons.place, size: 18, color: AppColors.primary),
                 ),
                 title: Text(place.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text(place.subtitle),
@@ -744,7 +742,7 @@ class _VehicleResultsSheet extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Row(
                 children: [
-                  const Icon(Icons.route, size: 16, color: Color(0xFF1E3A8A)),
+                  const Icon(Icons.route, size: 16, color: AppColors.primary),
                   const SizedBox(width: 6),
                   Text(routeSummary!, style: TextStyle(color: Colors.grey[700])),
                 ],
@@ -754,7 +752,7 @@ class _VehicleResultsSheet extends StatelessWidget {
           if (vehicleProvider.isLoading)
             const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
           else if (vehicleProvider.errorMessage != null)
-            Text(vehicleProvider.errorMessage!, style: const TextStyle(color: Colors.red))
+            Text(vehicleProvider.errorMessage!, style: const TextStyle(color: AppColors.danger))
           else if (vehicles.isEmpty)
             const Text('Aucun véhicule disponible pour l’instant. Réessayez plus tard.')
           else
@@ -883,7 +881,7 @@ class _MyBookingsView extends StatelessWidget {
                           : 'Je suis au point de départ',
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1E3A8A),
+                      backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                     ),
                   ),
@@ -916,7 +914,7 @@ class _MyBookingsView extends StatelessWidget {
                     icon: const Icon(Icons.payment),
                     label: const Text('Payer la réservation'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: AppColors.success,
                       foregroundColor: Colors.white,
                     ),
                   ),
@@ -951,8 +949,8 @@ class _MyBookingsView extends StatelessWidget {
                     Navigator.pop(sheetContext);
                     Navigator.push(context, MaterialPageRoute(builder: (_) => DisputeScreen(bookingId: booking.id)));
                   },
-                  icon: const Icon(Icons.warning, color: Colors.orange),
-                  label: const Text('Signaler un problème', style: TextStyle(color: Colors.orange)),
+                  icon: const Icon(Icons.warning, color: AppColors.warning),
+                  label: const Text('Signaler un problème', style: TextStyle(color: AppColors.warning)),
                 ),
               ),
             ],
@@ -991,15 +989,15 @@ class _MyBookingsView extends StatelessWidget {
   Color _getStatusColor(BookingStatus status) {
     switch (status) {
       case BookingStatus.PAID:
-        return Colors.green;
+        return AppColors.success;
       case BookingStatus.PENDING:
       case BookingStatus.CONFIRMED:
-        return Colors.orange;
+        return AppColors.warning;
       case BookingStatus.CANCELLED:
-        return Colors.red;
+        return AppColors.danger;
       case BookingStatus.IN_PROGRESS:
       case BookingStatus.COMPLETED:
-        return Colors.blue;
+        return AppColors.primary;
       default:
         return Colors.grey;
     }
@@ -1116,37 +1114,6 @@ class _FreightQuickActionState extends State<_FreightQuickAction> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ProfileView extends StatelessWidget {
-  const _ProfileView();
-
-  @override
-  Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
-          const SizedBox(height: 16),
-          Text(user?.nom ?? 'Utilisateur', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          Text(user?.telephone ?? '', style: const TextStyle(color: Colors.grey)),
-          const SizedBox(height: 32),
-          ListTile(
-            leading: const Icon(Icons.history),
-            title: const Text('Historique des trajets'),
-            onTap: () {},
-          ),
-          ListTile(
-            leading: const Icon(Icons.wallet),
-            title: const Text('Mon Portefeuille'),
-            onTap: () {},
-          ),
-        ],
       ),
     );
   }

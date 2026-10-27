@@ -9,6 +9,7 @@ import '../services/location_service.dart';
 import '../services/realtime_service.dart';
 import '../services/route_service.dart';
 import '../widgets/map_markers.dart';
+import '../core/app_theme.dart';
 
 /// Suivi en temps réel d'une réservation.
 ///
@@ -280,10 +281,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                     Row(
                       children: [
                         CircleAvatar(
-                          backgroundColor: widget.asDriver ? Colors.green[50] : Colors.blue[50],
+                          backgroundColor: widget.asDriver ? AppColors.successSoft : AppColors.primarySoft,
                           child: Icon(
                             widget.asDriver ? Icons.person_pin_circle : Icons.directions_car,
-                            color: widget.asDriver ? Colors.green[700] : const Color(0xFF1E3A8A),
+                            color: widget.asDriver ? AppColors.successDark : AppColors.primary,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -305,7 +306,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                         if (_distanceLabel != null)
                           Text(
                             _distanceLabel!,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
                           ),
                       ],
                     ),
@@ -315,7 +316,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                         Icon(
                           _other == null ? Icons.hourglass_empty : Icons.circle,
                           size: 12,
-                          color: _other == null ? Colors.orange : Colors.green,
+                          color: _other == null ? AppColors.warning : AppColors.success,
                         ),
                         const SizedBox(width: 6),
                         Expanded(child: Text(_freshnessLabel)),
@@ -337,7 +338,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen> {
                     if (_locationError != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
-                        child: Text(_locationError!, style: const TextStyle(color: Colors.red)),
+                        child: Text(_locationError!, style: const TextStyle(color: AppColors.danger)),
                       ),
                     if (!widget.asDriver)
                       Padding(

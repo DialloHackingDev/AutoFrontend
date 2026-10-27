@@ -24,6 +24,9 @@ class Booking {
   final String? paymentId;
   final String? paymentStatus;
   final String? paymentMethod;
+  final String? paymentReference;
+  final DateTime? paymentDate;
+  final DateTime? completedAt;
   final bool escrowHeld;
   final bool escrowReleased;
   final String? driverId;
@@ -45,6 +48,9 @@ class Booking {
     this.paymentId,
     this.paymentStatus,
     this.paymentMethod,
+    this.paymentReference,
+    this.paymentDate,
+    this.completedAt,
     this.escrowHeld = false,
     this.escrowReleased = false,
     this.driverId,
@@ -85,6 +91,9 @@ class Booking {
       paymentId: paymentJson?['id']?.toString(),
       paymentStatus: paymentJson?['statut']?.toString(),
       paymentMethod: paymentJson?['methode']?.toString(),
+      paymentReference: paymentJson?['transactionId']?.toString(),
+      paymentDate: DateTime.tryParse(paymentJson?['updatedAt']?.toString() ?? '')?.toLocal(),
+      completedAt: DateTime.tryParse(json['completedAt']?.toString() ?? '')?.toLocal(),
       escrowHeld: escrowJson?['isHeld'] ?? false,
       escrowReleased: escrowJson?['isReleased'] ?? false,
       driverId: json['driverId']?.toString(),

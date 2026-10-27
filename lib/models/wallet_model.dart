@@ -6,6 +6,9 @@ class Wallet {
   final double totalWithdrawalsRequested;
   final double totalCommissionPaid;
 
+  /// Commission plateforme prélevée sur chaque retrait (ex. 0.10 = 10 %)
+  final double commissionRate;
+
   Wallet({
     this.id,
     required this.balance,
@@ -13,6 +16,7 @@ class Wallet {
     required this.withdrawableBalance,
     this.totalWithdrawalsRequested = 0,
     this.totalCommissionPaid = 0,
+    this.commissionRate = 0.1,
   });
 
   factory Wallet.fromJson(Map<String, dynamic> json) {
@@ -27,6 +31,7 @@ class Wallet {
       withdrawableBalance: _toDouble(payload['withdrawableBalance']),
       totalWithdrawalsRequested: _toDouble(payload['totalWithdrawalsRequested']),
       totalCommissionPaid: _toDouble(payload['totalCommissionPaid']),
+      commissionRate: payload['commissionRate'] == null ? 0.1 : _toDouble(payload['commissionRate']),
     );
   }
 
@@ -64,7 +69,8 @@ class Transaction {
       montant: Wallet._toDouble(amount),
       description: description.toString(),
       createdAt: dateValue is DateTime ? dateValue : DateTime.parse(dateValue.toString()),
-      isCredit: json['isCredit'] ?? json['bookingId'] != null || json['montant'] != null,
+      // Gain = lié à une réservation ; un retrait n'a pas de bookingId
+      isCredit: json['isCredit'] ?? json['bookingId'] != null,
     );
   }
 }

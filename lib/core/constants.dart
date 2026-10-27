@@ -49,8 +49,19 @@ class ApiConstants {
   static String get walletHistory => '$baseUrl/wallet/history';
   static String get withdrawals => '$baseUrl/withdrawals';
 
+  // Portefeuille passager (Wallet AutoConnect)
+  static String get passengerWallet => '$baseUrl/passenger-wallet';
+  static String get passengerWalletTopUp => '$passengerWallet/topup';
+  static String passengerWalletTransaction(String id) => '$passengerWallet/transactions/$id';
+
+  // Profil
+  static String get userProfile => '$baseUrl/users/profile';
+  static String get userPassword => '$baseUrl/users/password';
+
   // Notifications
   static String get notifications => '$baseUrl/notifications';
+  static String notificationRead(String id) => '$notifications/$id/read';
+  static String get notificationsReadAll => '$notifications/read-all';
 
   // Litiges (Disputes)
   static String get disputes => '$baseUrl/disputes';

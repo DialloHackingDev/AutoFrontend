@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import '../core/app_theme.dart';
 
 /// Icônes de marqueurs dessinées par l'app et enregistrées dans le style de la carte.
 /// Utilisation : `SymbolOptions(iconImage: MapMarkers.car, ...)`.
@@ -17,10 +18,12 @@ class MapMarkers {
 
   /// À appeler dans `onStyleLoadedCallback` (le style recharge ses images à chaque chargement).
   static Future<void> register(MapLibreMapController controller) async {
-    await controller.addImage(destination, await _pin(const Color(0xFFDC2626), Icons.flag));
-    await controller.addImage(car, await _badge(const Color(0xFF1E3A8A), Icons.directions_car));
-    await controller.addImage(passenger, await _badge(const Color(0xFF16A34A), Icons.person));
-    await controller.addImage(station, await _badge(const Color(0xFF1E3A8A), Icons.directions_bus, size: 72));
+    // Couleurs de la charte : voiture rouge (comme le logo), passager vert,
+    // destination sombre (distincte de la voiture), gares orange
+    await controller.addImage(destination, await _pin(AppColors.ink, Icons.flag));
+    await controller.addImage(car, await _badge(AppColors.primary, Icons.directions_car));
+    await controller.addImage(passenger, await _badge(AppColors.success, Icons.person));
+    await controller.addImage(station, await _badge(AppColors.warning, Icons.directions_bus, size: 72));
   }
 
   /// Rond coloré avec icône blanche, contour blanc et ombre douce.

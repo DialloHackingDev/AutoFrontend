@@ -7,12 +7,16 @@ class User {
   final UserRole role;
   final String? token;
 
+  /// Langue de l'assistant vocal (FRANCAIS, PULAR, SOUSSOU, MALINKE)
+  final String langue;
+
   User({
     required this.id,
     required this.nom,
     required this.telephone,
     required this.role,
     this.token,
+    this.langue = 'FRANCAIS',
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -22,6 +26,7 @@ class User {
       telephone: json['telephone'],
       role: UserRole.values.firstWhere((e) => e.toString().split('.').last == json['role']),
       token: json['token'],
+      langue: json['langue']?.toString() ?? 'FRANCAIS',
     );
   }
 
@@ -31,6 +36,7 @@ class User {
       'nom': nom,
       'telephone': telephone,
       'role': role.toString().split('.').last,
+      'langue': langue,
     };
   }
 }

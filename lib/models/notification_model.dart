@@ -5,6 +5,7 @@ class NotificationModel {
   final String type;
   final bool isRead;
   final DateTime createdAt;
+  final String? bookingId;
 
   NotificationModel({
     required this.id,
@@ -13,16 +14,30 @@ class NotificationModel {
     required this.type,
     required this.isRead,
     required this.createdAt,
+    this.bookingId,
   });
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
-      id: json['id'],
-      titre: json['titre'],
-      message: json['message'],
-      type: json['type'],
-      isRead: json['isRead'] ?? false,
-      createdAt: DateTime.parse(json['createdAt']),
+      id: json['id'].toString(),
+      titre: json['titre']?.toString() ?? 'Notification',
+      message: json['message']?.toString() ?? '',
+      type: json['type']?.toString() ?? 'INFO',
+      isRead: json['isRead'] == true,
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '')?.toLocal() ?? DateTime.now(),
+      bookingId: json['bookingId']?.toString(),
+    );
+  }
+
+  NotificationModel copyWith({bool? isRead}) {
+    return NotificationModel(
+      id: id,
+      titre: titre,
+      message: message,
+      type: type,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt,
+      bookingId: bookingId,
     );
   }
 }

@@ -225,6 +225,21 @@ class BookingProvider with ChangeNotifier {
     return updateBookingStatus(bookingId, BookingStatus.COMPLETED.name);
   }
 
+  /// Statut d'un paiement, revérifié par le serveur auprès de l'opérateur.
+  Future<String?> checkPayment(String paymentId) async {
+    try {
+      final response = await _apiService.get(ApiConstants.paymentDetail(paymentId));
+      final status = (jsonDecode(response.body) as Map<String, dynamic>)['statut']?.toString();
+      if (status == 'COMPLETED' || status == 'FAILED' || status == 'REFUNDED') {
+        await fetchBookings();
+      }
+      return status;
+    } catch (e) {
+      debugPrint('Check payment error: $e');
+      return null;
+    }
+  }
+
   Future<bool> cancelBooking(String bookingId, {String? reason}) async {
     return updateBookingStatus(bookingId, BookingStatus.CANCELLED.name, reason: reason);
   }

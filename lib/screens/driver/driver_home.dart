@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -14,6 +15,9 @@ import '../../providers/vehicle_provider.dart';
 import 'scan_qr_screen.dart';
 import '../notifications_screen.dart';
 import '../dispute_screen.dart';
+import '../../core/app_theme.dart';
+import '../../widgets/payment_method_tile.dart';
+import '../../core/formatters.dart';
 
 class DriverHome extends StatefulWidget {
   const DriverHome({super.key});
@@ -22,18 +26,35 @@ class DriverHome extends StatefulWidget {
   State<DriverHome> createState() => _DriverHomeState();
 }
 
-class _DriverHomeState extends State<DriverHome> {
+class _DriverHomeState extends State<DriverHome> with WidgetsBindingObserver {
   int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<BookingProvider>(context, listen: false).fetchBookings();
-      Provider.of<WalletProvider>(context, listen: false).fetchWalletData();
+      _refresh();
       Provider.of<VehicleProvider>(context, listen: false).fetchMyVehicles();
-      Provider.of<DriverProvider>(context, listen: false).loadProfile();
     });
+  }
+
+  void _refresh() {
+    Provider.of<DriverProvider>(context, listen: false).loadProfile();
+    Provider.of<BookingProvider>(context, listen: false).fetchBookings();
+    Provider.of<WalletProvider>(context, listen: false).fetchWalletData();
+  }
+
+  /// Au retour dans l'application : statut (validation, disponibilité), réservations et gains à jour
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) _refresh();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
@@ -45,11 +66,7 @@ class _DriverHomeState extends State<DriverHome> {
       appBar: AppBar(
         title: const Text('AutoConnect', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(
-            tooltip: 'Notifications',
-            icon: const Icon(Icons.notifications),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
-          ),
+          const NotificationBell(),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => authProvider.logout(),
@@ -73,7 +90,7 @@ class _DriverHomeState extends State<DriverHome> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
-        selectedItemColor: const Color(0xFF1E3A8A),
+        selectedItemColor: AppColors.primary,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Tableau de bord'),
           BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Réservations'),
@@ -90,7 +107,7 @@ class _DriverHomeState extends State<DriverHome> {
               },
               label: const Text('Scanner QR'),
               icon: const Icon(Icons.qr_code_scanner),
-              backgroundColor: const Color(0xFF1E3A8A),
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
             )
           : null,
@@ -113,11 +130,23 @@ class _DashboardViewState extends State<_DashboardView> {
   MapLibreMapController? _map;
   bool _hasLocationPermission = false;
   LatLng? _myPosition;
+  Timer? _verificationPoll;
 
   @override
   void initState() {
     super.initState();
     _locate();
+    // Tant que le compte attend sa validation, le statut est revérifié régulièrement
+    _verificationPoll = Timer.periodic(const Duration(seconds: 30), (_) {
+      final driver = context.read<DriverProvider>();
+      if (driver.profileLoaded && !driver.isVerified) driver.loadProfile();
+    });
+  }
+
+  @override
+  void dispose() {
+    _verificationPoll?.cancel();
+    super.dispose();
   }
 
   Future<void> _locate() async {
@@ -216,11 +245,11 @@ class _DashboardViewState extends State<_DashboardView> {
                   const SizedBox(height: 8),
                   for (final booking in activeTrips)
                     Card(
-                      color: const Color(0xFFF0FDF4),
+                      color: AppColors.successSoft,
                       child: ListTile(
                         leading: const CircleAvatar(
-                          backgroundColor: Color(0xFFDCFCE7),
-                          child: Icon(Icons.person_pin_circle, color: Color(0xFF15803D)),
+                          backgroundColor: AppColors.successSoft,
+                          child: Icon(Icons.person_pin_circle, color: AppColors.successDark),
                         ),
                         title: Text(booking.passengerName ?? 'Passager'),
                         subtitle: Text('${booking.departure} → ${booking.destination}'),
@@ -274,7 +303,7 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pending = profileLoaded && !isVerified;
-    final color = pending ? Colors.amber[700]! : (isAvailable ? Colors.green[600]! : Colors.grey[600]!);
+    final color = pending ? AppColors.accent : (isAvailable ? AppColors.success : Colors.grey[600]!);
     final title = pending ? 'Vérification en cours' : (isAvailable ? 'En ligne' : 'Hors ligne');
     final subtitle = pending
         ? 'Un administrateur doit valider votre compte'
@@ -336,13 +365,13 @@ class _AvailabilityButton extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFBEB),
+          color: AppColors.warningSoft,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFFDE68A)),
+          border: Border.all(color: AppColors.warningBorder),
         ),
         child: const Row(
           children: [
-            Icon(Icons.verified_user_outlined, color: Color(0xFFB45309)),
+            Icon(Icons.verified_user_outlined, color: AppColors.warning),
             SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -369,7 +398,7 @@ class _AvailabilityButton extends StatelessWidget {
         icon: Icon(isAvailable ? Icons.pause_circle_outline : Icons.power_settings_new),
         label: child,
         style: FilledButton.styleFrom(
-          backgroundColor: isAvailable ? const Color(0xFF374151) : const Color(0xFF16A34A),
+          backgroundColor: isAvailable ? AppColors.ink : AppColors.success,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
@@ -390,13 +419,13 @@ class _StatTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F7FB),
+          color: AppColors.surfaceMuted,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 20, color: const Color(0xFF1E3A8A)),
+            Icon(icon, size: 20, color: AppColors.primary),
             const SizedBox(height: 8),
             FittedBox(
               fit: BoxFit.scaleDown,
@@ -557,9 +586,9 @@ class _DriverBookingsView extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 if (booking.statut == BookingStatus.CONFIRMED)
-                  const Text('En attente du paiement du passager', style: TextStyle(color: Colors.orange)),
+                  const Text('En attente du paiement du passager', style: TextStyle(color: AppColors.warning)),
                 if (booking.statut == BookingStatus.PAID)
-                  const Text('Payée — en attente de la confirmation du passager', style: TextStyle(color: Colors.orange)),
+                  const Text('Payée — en attente de la confirmation du passager', style: TextStyle(color: AppColors.warning)),
                 if (booking.isTrackable)
                   Align(
                     alignment: Alignment.centerLeft,
@@ -710,69 +739,276 @@ class _WalletView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final walletProvider = Provider.of<WalletProvider>(context);
+    final wallet = walletProvider.wallet;
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return RefreshIndicator(
+      onRefresh: walletProvider.fetchWalletData,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
-          Card(
-            color: const Color(0xFF1E3A8A),
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                children: [
-                  const Text('Solde disponible', style: TextStyle(color: Colors.white70, fontSize: 16)),
-                  const SizedBox(height: 8),
-                  Text(
-                    walletProvider.isLoading || walletProvider.wallet == null
-                        ? 'Chargement…'
-                        : '${walletProvider.wallet!.withdrawableBalance.toInt()} GNF',
-                    style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    walletProvider.wallet == null
-                        ? 'Solde en attente : —'
-                        : 'En attente : ${walletProvider.wallet!.pendingBalance.toInt()} GNF',
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                ],
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: const LinearGradient(
+                colors: [AppColors.primary, AppColors.primaryDark],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Disponible au retrait', style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 6),
+                Text(
+                  wallet == null ? '…' : formatGnf(wallet.withdrawableBalance),
+                  style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  wallet == null
+                      ? ''
+                      : 'En attente de fin de trajet : ${formatGnf(wallet.pendingBalance)}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: wallet == null || wallet.withdrawableBalance < 10000
+                        ? null
+                        : () => _showWithdrawalSheet(context, wallet.withdrawableBalance, wallet.commissionRate),
+                    icon: const Icon(Icons.arrow_circle_up),
+                    label: Text(
+                      wallet != null && wallet.withdrawableBalance < 10000
+                          ? 'Retrait possible dès ${formatGnf(10000)}'
+                          : 'Retirer vers Mobile Money',
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.primary,
+                      disabledBackgroundColor: Colors.white24,
+                      disabledForegroundColor: Colors.white70,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: walletProvider.wallet == null || walletProvider.wallet!.withdrawableBalance <= 0
-                ? null
-                : () {},
-            icon: const Icon(Icons.file_upload),
-            label: const Text('Demander un retrait'),
-            style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
-          ),
-          const SizedBox(height: 24),
-          const Text('Dernières transactions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          Expanded(
-            child: walletProvider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : walletProvider.transactions.isEmpty
-                    ? const Center(child: Text('Aucun mouvement enregistré'))
-                    : ListView.builder(
-                        itemCount: walletProvider.transactions.length,
-                        itemBuilder: (context, index) {
-                          final tx = walletProvider.transactions[index];
-                          return ListTile(
-                            leading: Icon(
-                              tx.isCredit ? Icons.arrow_downward : Icons.arrow_upward,
-                              color: tx.isCredit ? Colors.green : Colors.orange,
-                            ),
-                            title: Text(tx.description),
-                            subtitle: Text('${tx.createdAt.day}/${tx.createdAt.month}/${tx.createdAt.year}'),
-                            trailing: Text('${tx.montant.toInt()} GNF'),
-                          );
-                        },
+          const Text('Historique', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.ink)),
+          const SizedBox(height: 8),
+          if (walletProvider.isLoading && walletProvider.transactions.isEmpty)
+            const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator()))
+          else if (walletProvider.transactions.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Center(child: Text('Aucun mouvement pour le moment', style: TextStyle(color: AppColors.inkMuted))),
+            )
+          else
+            Card(
+              child: Column(
+                children: [
+                  for (final tx in walletProvider.transactions)
+                    ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: (tx.isCredit ? AppColors.success : AppColors.primary).withValues(alpha: 0.12),
+                        child: Icon(
+                          tx.isCredit ? Icons.south_west : Icons.north_east,
+                          color: tx.isCredit ? AppColors.success : AppColors.primary,
+                        ),
                       ),
-          ),
+                      title: Text(tx.isCredit ? 'Gain de trajet' : 'Retrait Mobile Money'),
+                      subtitle: Text(formatDateTime(tx.createdAt)),
+                      trailing: Text(
+                        '${tx.isCredit ? '+' : '−'} ${formatGnf(tx.montant)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: tx.isCredit ? AppColors.successDark : AppColors.ink,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showWithdrawalSheet(BuildContext context, double available, double commissionRate) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _WithdrawalSheet(available: available, commissionRate: commissionRate),
+    );
+  }
+}
+
+class _WithdrawalSheet extends StatefulWidget {
+  final double available;
+  final double commissionRate;
+
+  const _WithdrawalSheet({required this.available, required this.commissionRate});
+
+  @override
+  State<_WithdrawalSheet> createState() => _WithdrawalSheetState();
+}
+
+class _WithdrawalSheetState extends State<_WithdrawalSheet> {
+  late final TextEditingController _amountController;
+  late final TextEditingController _phoneController;
+  String _methode = PaymentMethods.mtn;
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController = TextEditingController(text: '${widget.available.floor()}');
+    final phone = context.read<AuthProvider>().user?.telephone ?? '';
+    _phoneController = TextEditingController(text: phone.replaceFirst('+224', ''));
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  int get _amount => int.tryParse(_amountController.text.replaceAll(RegExp(r'\D'), '')) ?? 0;
+  int get _commission => (_amount * widget.commissionRate).round();
+
+  Future<void> _submit() async {
+    if (_amount < 10000) {
+      setState(() => _error = 'Le retrait minimum est de ${formatGnf(10000)}.');
+      return;
+    }
+    if (_amount > widget.available) {
+      setState(() => _error = 'Montant supérieur au solde disponible (${formatGnf(widget.available)}).');
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    final error = await context.read<WalletProvider>().requestWithdrawal(
+          _amount.toDouble(),
+          _methode == PaymentMethods.orange ? 'ORANGE' : 'MTN',
+          AuthProvider.normalizePhone(_phoneController.text),
+        );
+    if (!mounted) return;
+    if (error != null) {
+      setState(() {
+        _submitting = false;
+        _error = error;
+      });
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.pop(context);
+    messenger.showSnackBar(SnackBar(
+      content: Text(
+        _methode == PaymentMethods.mtn
+            ? 'Retrait envoyé : ${formatGnf(_amount - _commission)} vers votre compte MTN MoMo.'
+            : 'Demande enregistrée : ${formatGnf(_amount - _commission)} seront versés sur Orange Money par l’équipe AutoConnect.',
+      ),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = (widget.commissionRate * 100).toStringAsFixed(widget.commissionRate * 100 % 1 == 0 ? 0 : 1);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('Retirer mes gains', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: AppColors.ink)),
+            const SizedBox(height: 4),
+            Text('Disponible : ${formatGnf(widget.available)}', style: const TextStyle(color: AppColors.inkMuted)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText: 'Montant à retirer',
+                suffixText: 'GNF',
+                prefixIcon: const Icon(Icons.payments_outlined),
+                suffixIcon: TextButton(
+                  onPressed: () => setState(() => _amountController.text = '${widget.available.floor()}'),
+                  child: const Text('Tout'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Recevoir sur', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.ink)),
+            const SizedBox(height: 8),
+            PaymentMethodTile(
+              methode: PaymentMethods.mtn,
+              selected: _methode == PaymentMethods.mtn,
+              subtitle: 'Virement automatique',
+              onTap: () => setState(() => _methode = PaymentMethods.mtn),
+            ),
+            const SizedBox(height: 8),
+            PaymentMethodTile(
+              methode: PaymentMethods.orange,
+              selected: _methode == PaymentMethods.orange,
+              subtitle: 'Versé par l’équipe AutoConnect',
+              onTap: () => setState(() => _methode = PaymentMethods.orange),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Numéro de réception',
+                prefixText: '+224 ',
+                prefixIcon: Icon(Icons.phone_outlined),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: AppColors.surfaceMuted, borderRadius: BorderRadius.circular(12)),
+              child: Column(
+                children: [
+                  _line('Montant demandé', formatGnf(_amount)),
+                  _line('Commission AutoConnect ($percent %)', '− ${formatGnf(_commission)}'),
+                  const Divider(),
+                  _line('Vous recevez', formatGnf(_amount - _commission), bold: true),
+                ],
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(_error!, style: const TextStyle(color: AppColors.danger)),
+            ],
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: _submitting ? null : _submit,
+              child: _submitting
+                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                  : const Text('Confirmer le retrait'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _line(String label, String value, {bool bold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: bold ? AppColors.ink : AppColors.inkMuted, fontWeight: bold ? FontWeight.w700 : null)),
+          Text(value, style: TextStyle(fontWeight: bold ? FontWeight.w700 : FontWeight.w600, color: AppColors.ink)),
         ],
       ),
     );

@@ -58,20 +58,21 @@ class WalletProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> requestWithdrawal(double amount, String operateur, String telephone) async {
+  /// Demande un retrait. Retourne null si la demande est acceptée, sinon le message d'erreur.
+  Future<String?> requestWithdrawal(double amount, String operateur, String telephone) async {
     try {
-      final response = await _apiService.post(ApiConstants.withdrawals, {
+      await _apiService.post(ApiConstants.withdrawals, {
         'montant': amount,
         'operateur': operateur,
         'telephone': telephone,
       });
-      if (response.statusCode == 201) {
-        await fetchWalletData();
-        return true;
-      }
+      await fetchWalletData();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
     } catch (e) {
       debugPrint('Withdrawal error: $e');
+      return 'La demande de retrait n’a pas pu être envoyée.';
     }
-    return false;
   }
 }

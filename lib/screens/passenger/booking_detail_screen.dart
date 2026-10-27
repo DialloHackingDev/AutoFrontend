@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/booking_model.dart';
 import '../../providers/booking_provider.dart';
 import '../../widgets/booking_qr_image.dart';
+import '../../core/app_theme.dart';
 
 class BookingDetailScreen extends StatefulWidget {
   final Booking booking;
@@ -46,7 +47,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _infoCol('Départ', booking.departure),
-                        const Icon(Icons.arrow_forward, color: Color(0xFF1E3A8A)),
+                        const Icon(Icons.arrow_forward, color: AppColors.primary),
                         _infoCol('Destination', booking.destination),
                       ],
                     ),
@@ -62,7 +63,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                       const SizedBox(height: 8),
                       const Text('Montrez ce code ou le QR au chauffeur', style: TextStyle(color: Colors.grey)),
                     ] else ...[
-                      const Icon(Icons.hourglass_empty, size: 60, color: Colors.orange),
+                      const Icon(Icons.hourglass_empty, size: 60, color: AppColors.warning),
                       const SizedBox(height: 16),
                       Text('Statut : ${booking.statut.name}'),
                     ],
@@ -107,7 +108,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 onPressed: () => _showPaymentDialog(context, booking),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 55),
-                  backgroundColor: Colors.green,
+                  backgroundColor: AppColors.success,
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('Procéder au paiement'),

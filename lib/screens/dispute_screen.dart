@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/dispute_provider.dart';
+import '../core/app_theme.dart';
 
 class DisputeScreen extends StatefulWidget {
   final String? bookingId;
@@ -80,7 +81,7 @@ class _DisputeScreenState extends State<DisputeScreen> {
               ElevatedButton(
                 onPressed: provider.isLoading ? null : _submitDispute,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor: AppColors.danger,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../core/constants.dart';
+import '../models/notification_model.dart';
 import 'api_service.dart';
 
 /// Position reçue en temps réel (passager ou chauffeur).
@@ -23,9 +24,12 @@ class RealtimeService {
   io.Socket? _socket;
   final Set<String> _bookingRooms = {};
   final Set<String> _driverRooms = {};
+  bool _disposed = false;
+  Duration _retryDelay = const Duration(seconds: 5);
 
   final _passengerPositions = StreamController<LivePosition>.broadcast();
   final _driverPositions = StreamController<LivePosition>.broadcast();
+  final _notifications = StreamController<NotificationModel>.broadcast();
 
   RealtimeService({ApiService? apiService}) : _apiService = apiService ?? ApiService();
 
@@ -35,32 +39,54 @@ class RealtimeService {
   /// Position du chauffeur (côté passager)
   Stream<LivePosition> get driverPositions => _driverPositions.stream;
 
+  /// Notifications poussées par le backend sur le canal privé de l'utilisateur
+  Stream<NotificationModel> get notifications => _notifications.stream;
+
   bool get isConnected => _socket?.connected ?? false;
 
   /// L'URL WebSocket est celle de l'API, sans le préfixe /api/v1.
   static String get _socketUrl => ApiConstants.baseUrl.replaceFirst(RegExp(r'/api/v\d+/?$'), '');
 
-  Future<void> connect() async {
-    if (_socket != null) return;
-
-    // Un appel API déclenche le rafraîchissement du token s'il a expiré
+  /// Jeton d'accès valide : un appel API déclenche son rafraîchissement s'il a expiré.
+  Future<String?> _freshToken() async {
     try {
       await _apiService.get(ApiConstants.authMe);
     } catch (_) {}
-    final token = await _apiService.getToken();
-    if (token == null) return;
+    return _apiService.getToken();
+  }
+
+  Future<void> connect() async {
+    if (_socket != null) return;
+    if (await _freshToken() == null) return;
 
     final socket = io.io(
       _socketUrl,
       io.OptionBuilder()
           .setTransports(['websocket'])
-          .setAuth({'token': token})
           .disableAutoConnect()
           .enableReconnection()
           .build(),
     );
 
+    // Le jeton expire au bout de 15 min : il est relu à CHAQUE connexion et reconnexion,
+    // sinon une reconnexion (réseau coupé, serveur redémarré) serait refusée définitivement.
+    socket.auth = (dynamic send) {
+      _freshToken().then((token) => send({'token': token ?? ''}));
+    };
+
+    socket.onDisconnect((reason) {
+      // Coupure décidée par le serveur (jeton refusé, redémarrage) : socket.io ne retente pas
+      // de lui-même, on relance donc la connexion avec un délai croissant.
+      if (_disposed || reason != 'io server disconnect') return;
+      final delay = _retryDelay;
+      _retryDelay = Duration(seconds: (_retryDelay.inSeconds * 2).clamp(5, 60));
+      Future.delayed(delay, () {
+        if (!_disposed && !(_socket?.connected ?? false)) socket.connect();
+      });
+    });
+
     socket.onConnect((_) {
+      _retryDelay = const Duration(seconds: 5);
       for (final bookingId in _bookingRooms) {
         socket.emit('subscribe_booking', bookingId);
       }
@@ -75,6 +101,11 @@ class RealtimeService {
     socket.on('driver_location_update', (data) {
       final position = _parse(data);
       if (position != null) _driverPositions.add(position);
+    });
+    socket.on('notification', (data) {
+      if (data is Map) {
+        _notifications.add(NotificationModel.fromJson(Map<String, dynamic>.from(data)));
+      }
     });
     socket.on('exception', (error) => debugPrint('Temps réel : $error'));
 
@@ -114,11 +145,13 @@ class RealtimeService {
   }
 
   void dispose() {
+    _disposed = true;
     _socket?.dispose();
     _socket = null;
     _bookingRooms.clear();
     _driverRooms.clear();
     _passengerPositions.close();
     _driverPositions.close();
+    _notifications.close();
   }
 }

@@ -188,6 +188,40 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Modifie le nom et/ou la langue. Retourne null si succès, sinon le message d'erreur.
+  Future<String?> updateProfile({String? nom, String? langue}) async {
+    try {
+      final response = await _apiService.patch(ApiConstants.userProfile, {
+        'nom': ?nom,
+        'langue': ?langue,
+      });
+      final user = User.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+      await _persistSession(token: _token, refreshToken: _refreshToken, user: user);
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (e) {
+      debugPrint('Update profile error: $e');
+      return 'Impossible d’enregistrer les modifications.';
+    }
+  }
+
+  /// Change le mot de passe. Retourne null si succès, sinon le message d'erreur.
+  Future<String?> changePassword(String current, String next) async {
+    try {
+      await _apiService.patch(ApiConstants.userPassword, {
+        'motDePasseActuel': current,
+        'nouveauMotDePasse': next,
+      });
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (e) {
+      debugPrint('Change password error: $e');
+      return 'Impossible de changer le mot de passe.';
+    }
+  }
+
   /// Le backend attend un numéro international (+224…).
   /// Accepte aussi les saisies locales : "620 00 00 00", "00224…", "224…".
   static String normalizePhone(String input) {
